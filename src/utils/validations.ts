@@ -13,3 +13,14 @@ export function validateLongitude(lon: number): number {
     }
     return lon;
 }
+
+export function validateCityName(name: string): string {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) {
+        throw new ValidationError('City name must be at least 2 characters');
+    }
+    if (trimmed.length > 100) {
+        throw new ValidationError('City name must not exceed 100 characters');
+    }
+    return trimmed;
+}

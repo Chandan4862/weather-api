@@ -27,6 +27,33 @@ export interface WeatherForecast {
     daily: DailyWeather[];
 }
 
+export enum ActivityType {
+    SKIING = 'SKIING',
+    SURFING = 'SURFING',
+    INDOOR_SIGHTSEEING = 'INDOOR_SIGHTSEEING',
+    OUTDOOR_SIGHTSEEING = 'OUTDOOR_SIGHTSEEING',
+}
+
+export interface ActivityRecommendation {
+    activity: ActivityType;
+    score: number;
+    rank: number;
+}
+
+export interface DailyPlan {
+    date: string;
+    weather: DailyWeather;
+    activities: ActivityRecommendation[];
+}
+
+export interface TravelPlan {
+    city: City;
+    dailyPlans: DailyPlan[];
+}
+
+export type ActivityScorer = (weather: DailyWeather) => {
+    score: number;
+};
 //------------------------------------
 export interface ICityService {
     searchCities(name: string, limit?: number): Promise<City[]>;
@@ -40,6 +67,10 @@ export interface ICacheService {
 
 export interface IWeatherService {
     getWeather(latitude: number, longitude: number, days: number): Promise<WeatherForecast>
+}
+
+export interface IActivityService {
+    rankActivities: (weather: DailyWeather) => ActivityRecommendation[]
 }
 
 //------------------------------------
