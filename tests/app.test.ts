@@ -28,6 +28,12 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
     getRedisClient();
   });
 
+  beforeEach(async () => {
+    // Clear any stale cached data from previous test runs or dev usage
+    const redis = getRedisClient();
+    await redis.flushdb();
+  });
+
   afterAll(async () => {
     await closeRedis();
   });
@@ -44,7 +50,7 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
           results: [
             {
               id: 1275339,
-              name: "Mumbai2",
+              name: "Mumbai",
               latitude: 19.07283,
               longitude: 72.88261,
               country: "India",
@@ -136,6 +142,86 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
 
       expect(response.body.errors).toBeDefined();
       expect(response.body.errors[0].message).toContain('No cities found');
+    });
+  });
+
+  describe('Query: getWeather', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('Should return weather forecast for valid coordinates', async () => {
+      mockGet.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          latitude: 19.07,
+          longitude: 72.88,
+          timezone: 'Asia/Kolkata',
+          daily: {
+            time: ['2026-05-25', '2026-05-26'],
+            temperature_2m_max: [35.2, 33.8],
+            temperature_2m_min: [27.1, 26.5],
+            precipitation_sum: [0.0, 2.3],
+            wind_speed_10m_max: [12.5, 15.0],
+            weather_code: [1, 61],
+            snowfall_sum: [0.0, 0.0],
+          }
+        }
+      });
+
+      const response = await request(app)
+        .post('/graphql')
+        .send({
+          query: `
+            query {
+              getWeather(latitude: 19.07, longitude: 72.88, days: 2) {
+                latitude
+                longitude
+                timezone
+                daily {
+                  date
+                  temperatureMax
+                  temperatureMin
+                  precipitationSum
+                  windSpeedMax
+                  weatherCode
+                  snowfallSum
+                }
+              }
+            }
+          `
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.getWeather.latitude).toBe(19.07);
+      expect(response.body.data.getWeather.timezone).toBe('Asia/Kolkata');
+      expect(response.body.data.getWeather.daily).toHaveLength(2);
+      expect(response.body.data.getWeather.daily[0]).toEqual({
+        date: '2026-05-25',
+        temperatureMax: 35.2,
+        temperatureMin: 27.1,
+        precipitationSum: 0.0,
+        windSpeedMax: 12.5,
+        weatherCode: 1,
+        snowfallSum: 0.0,
+      });
+    });
+
+    test('Should return VALIDATION_ERROR for invalid latitude', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .send({
+          query: `
+            query {
+              getWeather(latitude: 999, longitude: 72.88, days: 3) {
+                latitude
+              }
+            }
+          `
+        });
+
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors[0].message).toContain('Latitude must be between');
     });
   });
 });
