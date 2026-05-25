@@ -5,6 +5,7 @@ import { getRedis } from '../redis/client';
 export const schema: GraphQLSchema = buildSchema(`
   type Query {
     hello: String!
+    searchCities(name: String!): [String!]!
   }
 
   type Mutation {
@@ -32,4 +33,8 @@ export const rootResolvers = {
 
     return `Successfully updated greeting to: "${message}" in Redis!`;
   },
+
+  searchCities: async ({ name }: { name: string }): Promise<string[]> => {
+    return [];
+  }
 };
