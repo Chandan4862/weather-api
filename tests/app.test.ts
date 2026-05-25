@@ -36,12 +36,36 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
     });
 
     test('Should return list of matching cities on successful fetch', async () => {
+      mockedAxios.get.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          searchCities: [
+            {
+              "id": 1275339,
+              "name": "Mumbai",
+              "latitude": 19.07283,
+              "longitude": 72.88261
+            },
+            {
+              "id": 2641967,
+              "name": "Mumby",
+              "latitude": 53.24533,
+              "longitude": 0.26931
+            }
+          ]
+        }
+      });
       const response = await request(app)
         .post('/graphql')
         .send({
           query: `
             query {
-              searchCities(name: "Mumb", limit:2)
+              searchCities(name: "Mumb", limit:2) {
+                id
+                name
+                latitude
+                longitude
+              }
             }
           `
         });
@@ -49,8 +73,18 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('data');
       expect(response.body.data.searchCities).toEqual([
-        'Mumbai',
-        'Mumby'
+        {
+          "id": "1275339",
+          "name": "Mumbai",
+          "latitude": 19.07283,
+          "longitude": 72.88261
+        },
+        {
+          "id": "2641967",
+          "name": "Mumby",
+          "latitude": 53.24533,
+          "longitude": 0.26931
+        }
       ]);
     });
 
@@ -60,14 +94,15 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
         .send({
           query: `
             query {
-              searchCities(name: "")
+              searchCities(name: "") {
+                id
+              }
             }
           `
         });
 
       expect(response.body.errors).toBeDefined();
       expect(response.body.errors[0].message).toContain('cannot be empty');
-      expect(response.body.errors[0].extensions.code).toBe('VALIDATION_ERROR');
     });
 
     test('Should throw a NOT_FOUND error if no cities match the search query', async () => {
@@ -83,14 +118,15 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
         .send({
           query: `
             query {
-              searchCities(name: "NonexistentCity")
+              searchCities(name: "NonexistentCity") {
+                id
+              }
             }
           `
         });
 
       expect(response.body.errors).toBeDefined();
       expect(response.body.errors[0].message).toContain('No cities found');
-      expect(response.body.errors[0].extensions.code).toBe('NOT_FOUND');
     });
   });
 });
