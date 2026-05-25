@@ -11,6 +11,7 @@ export interface Config {
   WHEATHER_API: {
     geocodingBaseUrl: string
     weatherBaseUrl: string
+    ttl: number
   }
 }
 
@@ -21,6 +22,7 @@ export const config: Config = {
   WHEATHER_API: {
     geocodingBaseUrl: process.env.GEOCODING_BASE_URL!,
     weatherBaseUrl: process.env.WEATHER_BASE_URL!,
+    ttl: 3600
   }
 };
 

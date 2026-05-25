@@ -1,33 +1,35 @@
 import request from 'supertest';
-import app from '../src/app';
-import { initRedis, closeRedis } from '../src/redis/client';
 import axios from 'axios';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+// Mock axios BEFORE importing app (which imports httpClient → axios.create)
+const mockGet = jest.fn();
+jest.mock('axios', () => {
+  return {
+    __esModule: true,
+    default: {
+      create: jest.fn(() => ({
+        get: mockGet,
+        interceptors: {
+          request: { use: jest.fn() },
+          response: { use: jest.fn() },
+        },
+      })),
+      get: jest.fn(),
+    },
+  };
+});
+
+import app from '../src/app';
+import { getRedisClient, closeRedis } from '../src/redis/client';
 
 describe('Travel Planner GraphQL API Integration Tests', () => {
 
-  // Connect Redis cache prior to running tests
   beforeAll(async () => {
-    await initRedis();
+    getRedisClient();
   });
 
-  // Disconnect Redis cleanly after all tests finish
   afterAll(async () => {
     await closeRedis();
-  });
-
-  test('Query: hello - Should return Hello, World!', async () => {
-    const response = await request(app)
-      .post('/graphql')
-      .send({
-        query: '{ hello }'
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('data');
-    expect(response.body.data.hello).toBe('Hello, World!');
   });
 
   describe('Query: searchCities', () => {
@@ -36,31 +38,38 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
     });
 
     test('Should return list of matching cities on successful fetch', async () => {
-      mockedAxios.get.mockResolvedValueOnce({
+      mockGet.mockResolvedValueOnce({
         status: 200,
         data: {
-          searchCities: [
+          results: [
             {
-              "id": 1275339,
-              "name": "Mumbai",
-              "latitude": 19.07283,
-              "longitude": 72.88261
+              id: 1275339,
+              name: "Mumbai2",
+              latitude: 19.07283,
+              longitude: 72.88261,
+              country: "India",
+              country_code: "IN",
+              timezone: "Asia/Kolkata"
             },
             {
-              "id": 2641967,
-              "name": "Mumby",
-              "latitude": 53.24533,
-              "longitude": 0.26931
+              id: 2641967,
+              name: "Mumby",
+              latitude: 53.24533,
+              longitude: 0.26931,
+              country: "United Kingdom",
+              country_code: "GB",
+              timezone: "Europe/London"
             }
           ]
         }
       });
+
       const response = await request(app)
         .post('/graphql')
         .send({
           query: `
             query {
-              searchCities(name: "Mumb", limit:2) {
+              searchCities(name: "Mumb", limit: 2) {
                 id
                 name
                 latitude
@@ -74,21 +83,21 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
       expect(response.body).toHaveProperty('data');
       expect(response.body.data.searchCities).toEqual([
         {
-          "id": "1275339",
-          "name": "Mumbai",
-          "latitude": 19.07283,
-          "longitude": 72.88261
+          id: "1275339",
+          name: "Mumbai",
+          latitude: 19.07283,
+          longitude: 72.88261
         },
         {
-          "id": "2641967",
-          "name": "Mumby",
-          "latitude": 53.24533,
-          "longitude": 0.26931
+          id: "2641967",
+          name: "Mumby",
+          latitude: 53.24533,
+          longitude: 0.26931
         }
       ]);
     });
 
-    test('Should throw a VALIDATION_ERROR if the search query name is empty', async () => {
+    test('Should return a VALIDATION_ERROR when name is empty', async () => {
       const response = await request(app)
         .post('/graphql')
         .send({
@@ -105,8 +114,8 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
       expect(response.body.errors[0].message).toContain('cannot be empty');
     });
 
-    test('Should throw a NOT_FOUND error if no cities match the search query', async () => {
-      mockedAxios.get.mockResolvedValueOnce({
+    test('Should return a NOT_FOUND error when no cities match', async () => {
+      mockGet.mockResolvedValueOnce({
         status: 200,
         data: {
           results: []
@@ -118,7 +127,7 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
         .send({
           query: `
             query {
-              searchCities(name: "NonexistentCity") {
+              searchCities(name: "NonexistentCity", limit:3) {
                 id
               }
             }

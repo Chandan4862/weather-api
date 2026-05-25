@@ -4,15 +4,19 @@ export class AppError extends GraphQLError {
     public readonly code: string
     public readonly statusCode: number
     constructor(message: string, code: string, statusCode: number) {
-        super(message);
+        // GraphQL v15: positional args (message, nodes, source, positions, path, originalError, extensions)
+        super(
+            message,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            { code, statusCode }
+        );
         this.code = code;
         this.statusCode = statusCode
     }
-
-    toGraphQLError(): GraphQLError {
-        return new GraphQLError(this.message);
-    }
-
 }
 
 export class ValidationError extends AppError {

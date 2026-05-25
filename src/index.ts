@@ -1,21 +1,18 @@
 import app from './app';
 import config from './config/env';
-import { initRedis, closeRedis } from './redis/client';
+import { closeRedis } from './redis/client';
 import { Server } from 'http';
 
 async function startServer(): Promise<void> {
   try {
-    console.log('Starting Travel Planner GraphQL service...');
+    console.log('Starting Travel Planner GraphQL service...')
 
-    // 1. Initialize Redis client (handles actual connection or resilient memory mock)
-    await initRedis();
-
-    // 2. Start Express server listener
+    // Start Express server listener
     const server: Server = app.listen(config.PORT, () => {
       console.log(`Travel Planner server running on port ${config.PORT}`);
     });
 
-    // 3. Graceful Shutdown handlers to prevent socket/connection leaks
+    // Graceful Shutdown handlers to prevent socket/connection leaks
     const handleShutdown = async (signal: string): Promise<void> => {
       console.log(`Received ${signal}. Initiating graceful shutdown...`);
       server.close(async () => {
