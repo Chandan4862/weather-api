@@ -1,5 +1,5 @@
 import { AxiosInstance } from "axios";
-import { ICacheService, ICityService, City, WheatherpiResponse } from "../types";
+import { ICacheService, ICityService, City, WeatherpiResponse } from "../types";
 import config from "../config/env";
 import { ExternalApiError, NotFoundError } from "../lib/errors";
 
@@ -23,8 +23,8 @@ export class CityService implements ICityService {
         }
 
         // 2. Fetch from external Geocoding API
-        const response = await this.httpClient.get<WheatherpiResponse>(
-            `${config.WHEATHER_API.geocodingBaseUrl}/search`,
+        const response = await this.httpClient.get<WeatherpiResponse>(
+            `${config.WEATHER_API.geocodingBaseUrl}/search`,
             {
                 params: {
                     name,
@@ -54,7 +54,7 @@ export class CityService implements ICityService {
         }));
 
         // 4. Write to cache (fire-and-forget — don't block the response)
-        this.cacheService.set(cacheKey, cities, config.WHEATHER_API.ttl).catch((err) => {
+        this.cacheService.set(cacheKey, cities, config.WEATHER_API.ttl).catch((err) => {
             console.warn('CityService -- Cache write failed:', err.message);
         });
 
