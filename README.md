@@ -2,11 +2,66 @@
 
 Travel planner api using open-meteo api
 
+# Setup
+- docker compose up
+
 # API
 
 1. **`searchCities(name: String!, limit: Int): [City!]!`**
+  ```graphql
+query SearchCities($name: String!, $limit: Int) {
+  searchCities(name: $name, limit: $limit) {
+    id
+    name
+    latitude
+    longitude
+  }
+}
+  ```
+
 2. **`getWeather(latitude: Float!, longitude: Float!, days: Int): WeatherForecast!`**
+  ```graphql
+query GetWeather($latitude: Float!, $longitude: Float!, $days: Int) {
+  getWeather(latitude: $latitude, longitude: $longitude, days: $days) {
+    latitude
+    longitude
+    timezone
+    daily {
+      date
+      temperatureMax
+      temperatureMin
+      precipitationSum
+      windSpeedMax
+      weatherCode
+      snowfallSum
+    }
+  }
+}
+  ```
 3. **`getTravelPlan(cityName: String!, days: Int = 7): TravelPlan!`**
+  ```graphql
+  query GetTravelPlan($cityName: String!, $days: Int) {
+    getTravelPlan(cityName: $cityName, days: $days) {
+      city {
+        name
+        country
+        latitude
+        longitude
+      }
+      dailyPlans {
+        date
+        weather {
+          temperatureMax
+          precipitationSum
+        }
+        activities {
+          activity
+          rank
+        }
+      }
+    }
+  }
+  ```
 
 # Architecture & Technical Choices
 
