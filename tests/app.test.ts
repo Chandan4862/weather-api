@@ -224,4 +224,140 @@ describe('Travel Planner GraphQL API Integration Tests', () => {
       expect(response.body.errors[0].message).toContain('Latitude must be between');
     });
   });
+
+  describe('Query: getTravelPlan', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('Should return travel plan with city, weather, and sorted activities', async () => {
+      // city search
+      mockGet.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          results: [
+            {
+              id: 1275339,
+              name: "Mumbai",
+              latitude: 19.07283,
+              longitude: 72.88261,
+              country: "India",
+              country_code: "IN",
+              timezone: "Asia/Kolkata"
+            }
+          ]
+        }
+      });
+
+      // Second weather
+      mockGet.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          latitude: 19.07,
+          longitude: 72.88,
+          timezone: 'Asia/Kolkata',
+          daily: {
+            time: ['2026-05-25'],
+            temperature_2m_max: [35.2],
+            temperature_2m_min: [27.1],
+            precipitation_sum: [0.0],
+            wind_speed_10m_max: [12.5],
+            weather_code: [1],
+            snowfall_sum: [0.0],
+          }
+        }
+      });
+
+      const response = await request(app)
+        .post('/graphql')
+        .send({
+          query: `
+            query {
+              getTravelPlan(cityName: "Mumbai", days: 1) {
+                city {
+                  name
+                  latitude
+                  longitude
+                }
+                dailyPlans {
+                  date
+                  weather {
+                    temperatureMax
+                    temperatureMin
+                  }
+                  activities {
+                    activity
+                    rank
+                  }
+                }
+              }
+            }
+          `
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeDefined();
+
+      const plan = response.body.data.getTravelPlan;
+      expect(plan.city.name).toBe("Mumbai");
+      expect(plan.dailyPlans).toHaveLength(1);
+
+      const dailyPlan = plan.dailyPlans[0];
+      expect(dailyPlan.date).toBe("2026-05-25");
+      expect(dailyPlan.weather.temperatureMax).toBe(35.2);
+      expect(dailyPlan.activities).toHaveLength(4);
+
+      // rank verification
+      const activities = dailyPlan.activities;
+      expect(activities[0].rank).toBe(1);
+      expect(activities[1].rank).toBe(2);
+      expect(activities[2].rank).toBe(3);
+      expect(activities[3].rank).toBe(4);
+    });
+
+    test('Should return VALIDATION_ERROR when city name is too short', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .send({
+          query: `
+            query {
+              getTravelPlan(cityName: "M", days: 1) {
+                city {
+                  name
+                }
+              }
+            }
+          `
+        });
+
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors[0].message).toContain('City name must be at least 2 characters');
+    });
+
+    test('Should return NOT_FOUND error when city does not exist', async () => {
+      mockGet.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          results: []
+        }
+      });
+
+      const response = await request(app)
+        .post('/graphql')
+        .send({
+          query: `
+            query {
+              getTravelPlan(cityName: "NonexistentCity", days: 1) {
+                city {
+                  name
+                }
+              }
+            }
+          `
+        });
+
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors[0].message).toContain('No cities found matching');
+    });
+  });
 });
